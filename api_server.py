@@ -18,7 +18,7 @@ db = Database()
 # Charger le modèle XGBoost
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "model_productivite_xgb.pkl")
 try:
-    xgb_model = joblib.load(MODEL_PATH)
+xgb_model = joblib.load(MODEL_PATH)
     MODEL_LOADED = True
 except:
     MODEL_LOADED = False
@@ -445,28 +445,28 @@ def predict():
         
         # Utiliser le modèle si disponible, sinon simulation
         if MODEL_LOADED:
-            # Création du dictionnaire de données - EXACTEMENT comme dans Streamlit
-            model_data = {
-                "Coût_production/ha": [data['cout_prod']],
-                "Age_verger": [data['age_verger']],
-                "Région": [data['region']],
-                "Pluviometrie": [data['pluviometrie']],
-                "Sexe": [data['sexe']],
+        # Création du dictionnaire de données - EXACTEMENT comme dans Streamlit
+        model_data = {
+            "Coût_production/ha": [data['cout_prod']],
+            "Age_verger": [data['age_verger']],
+            "Région": [data['region']],
+            "Pluviometrie": [data['pluviometrie']],
+            "Sexe": [data['sexe']],
                 "Niveau_education": ["Non renseigné"],
-                "Competences": [data['competences']],
-                "Engrais chimique": [data['engrais']],
-                "Agroforesterie": [data['agroforest']],
-                "fumier/ compost": [data['fumier']],
-                "Herbicide": [data['herbicide']],
-                "Insecticide": [data['insecticide']],
-                "Fongicide": [data['fongicide']],
-                "Maladie": [data['maladie']],
-            }
-            
+            "Competences": [data['competences']],
+            "Engrais chimique": [data['engrais']],
+            "Agroforesterie": [data['agroforest']],
+            "fumier/ compost": [data['fumier']],
+            "Herbicide": [data['herbicide']],
+            "Insecticide": [data['insecticide']],
+            "Fongicide": [data['fongicide']],
+            "Maladie": [data['maladie']],
+        }
+        
             # Création du DataFrame et prédiction
-            df_input = pd.DataFrame(model_data)
-            X_trans = xgb_model.named_steps["prep"].transform(df_input)
-            pred = xgb_model.named_steps["model"].predict(X_trans)[0]
+        df_input = pd.DataFrame(model_data)
+        X_trans = xgb_model.named_steps["prep"].transform(df_input)
+        pred = xgb_model.named_steps["model"].predict(X_trans)[0]
             production = pred  # t/ha
         else:
             # Mode simulation
