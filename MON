@@ -1,0 +1,4 @@
+git add .
+git status  # Vérifier ce qui sera inclus
+git commit -m "Initial commit - Mon Cacao"
+git push origin main
