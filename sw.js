@@ -4,27 +4,27 @@
  */
 
 const CACHE_NAME = 'mon-cacao-v2.0';
-const OFFLINE_URL = '/offline.html';
+const OFFLINE_URL = 'offline.html';
 
-// Fichiers à mettre en cache
+// Fichiers à mettre en cache (chemins relatifs pour fonctionner avec ou sans serveur)
 const CACHE_FILES = [
-    '/',
-    '/index.html',
-    '/user-type-selection.html',
-    '/auth.html',
-    '/dashboard-professionnel.html',
-    '/mes-producteurs.html',
-    '/estimation-production.html',
-    '/analyse-conseils.html',
-    '/statistiques.html',
-    '/graphiques.html',
-    '/rapports.html',
-    '/css/style.css',
-    '/css/modern-banner.css',
-    '/js/script.js',
-    '/js/auth.js',
-    '/js/database-sync.js',
-    '/offline.html'
+    './',
+    './index.html',
+    './user-type-selection.html',
+    './auth.html',
+    './dashboard-professionnel.html',
+    './mes-producteurs.html',
+    './estimation-production.html',
+    './analyse-conseils.html',
+    './statistiques.html',
+    './graphiques.html',
+    './rapports.html',
+    './css/style.css',
+    './css/modern-banner.css',
+    './js/script.js',
+    './js/auth.js',
+    './js/database-sync.js',
+    './offline.html'
 ];
 
 // Installation du Service Worker
@@ -98,8 +98,8 @@ self.addEventListener('fetch', (event) => {
                     })
                     .catch(() => {
                         // Si hors ligne et que c'est une page HTML, retourner la page offline
-                        if (event.request.headers.get('accept').includes('text/html')) {
-                            return caches.match(OFFLINE_URL);
+                        if (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html')) {
+                            return caches.match(OFFLINE_URL) || caches.match('./offline.html');
                         }
                     });
             })
@@ -149,7 +149,7 @@ self.addEventListener('notificationclick', (event) => {
     
     event.notification.close();
     
-    const urlToOpen = event.notification.data.url || '/';
+    const urlToOpen = event.notification.data.url || './index.html';
     
     event.waitUntil(
         clients.matchAll({

@@ -872,7 +872,8 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
+                // Utiliser un chemin relatif pour fonctionner avec ou sans serveur
+                navigator.serviceWorker.register('./sw.js')
                     .then(registration => {
                         console.log('Service Worker enregistré:', registration);
                     })
