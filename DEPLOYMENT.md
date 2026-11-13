@@ -28,6 +28,18 @@ Les données et le modèle historiques sont conservés. Aucun volume, prix, comp
 4. Faire valider les champs et les conseils par les professionnels du pilote.
 5. Confirmer les règles de collecte, de conservation et d'accès avec l'organisation responsable.
 
+## Conteneur prêt pour un hébergement avec disque persistant
+
+Le Dockerfile copie uniquement le serveur, les dépendances et les fichiers de l'interface. Les bases historiques, le modèle, les sauvegardes et les comptes de vérification ne sont pas inclus.
+
+Monter un disque persistant sur `/data` avant toute saisie réelle. La base sera `/data/v1.sqlite`. L'hébergeur doit terminer HTTPS ; le conteneur active les cookies Secure et écoute le port défini par PORT. Utiliser `/health` comme contrôle de disponibilité. Ne pas lancer plusieurs réplicas avec des disques séparés.
+
+Sur Render, sélectionner le dépôt MonCacao_IA, la branche main et le runtime Docker, puis attacher un disque à `/data`. Un disque persistant nécessite une offre payante ; le plan et son coût doivent être acceptés avant création du service. Aucun service payant n'est créé par ces fichiers.
+
+Après déploiement, créer le premier compte dans le terminal du service avec `python -m flask --app v1:create_app create-professional`. Ne jamais publier de mot de passe dans le dépôt. La base V1 est initialement vide ; la reprise des données terrain reste séparée.
+
+Le conteneur doit encore être construit et vérifié chez l'hébergeur. Les tests locaux valident le serveur Flask et non une mise en production déjà effectuée.
+
 ## Revenir à la version précédente
 
 Le point de départ du travail est le commit f0994e6306f7121ac4e181d07351a25097e8bcaf du dépôt MonCacao_IA. L'ancienne application reste récupérable dans Git. Les bases de l'ancienne application et de la V1 sont séparées ; revenir au code précédent ne convertit pas les données V1.

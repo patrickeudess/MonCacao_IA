@@ -1,0 +1,9 @@
+*
+!Dockerfile
+!requirements.txt
+!api_server.py
+!v1.py
+!templates/
+!templates/**
+!static/
+!static/**
