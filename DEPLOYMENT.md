@@ -30,7 +30,7 @@ Les données et le modèle historiques sont conservés. Aucun volume, prix, comp
 
 ## Conteneur prêt pour un hébergement avec disque persistant
 
-Le Dockerfile copie uniquement le serveur, les dépendances et les fichiers de l'interface. Les bases historiques, le modèle, les sauvegardes et les comptes de vérification ne sont pas inclus.
+Le Dockerfile copie uniquement le serveur, le modèle vérifié, les dépendances et les fichiers de l’interface. Les bases historiques, les sauvegardes et les comptes de vérification ne sont pas inclus.
 
 Monter un disque persistant sur `/data` avant toute saisie réelle. La base sera `/data/v1.sqlite`. L'hébergeur doit terminer HTTPS ; le conteneur active les cookies Secure et écoute le port défini par PORT. Utiliser `/health` comme contrôle de disponibilité. Ne pas lancer plusieurs réplicas avec des disques séparés.
 

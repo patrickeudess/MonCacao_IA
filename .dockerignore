@@ -3,6 +3,8 @@
 !requirements.txt
 !api_server.py
 !v1.py
+!prediction_service.py
+!model_productivite_xgb.pkl
 !templates/
 !templates/**
 !static/

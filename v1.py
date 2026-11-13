@@ -3,6 +3,7 @@ from contextlib import closing
 import csv
 import hashlib
 import io
+import json
 import math
 import os
 import secrets
@@ -13,6 +14,7 @@ from pathlib import Path
 import click
 from flask import Flask, g, jsonify, request, send_from_directory
 from werkzeug.security import check_password_hash, generate_password_hash
+from prediction_service import Predictor, ModelUnavailable
 
 ROOT = Path(__file__).resolve().parent
 SCHEMA = '''
@@ -23,6 +25,8 @@ CREATE INDEX IF NOT EXISTS producer_owner ON producers(owner_id);
 CREATE TABLE IF NOT EXISTS harvests(id INTEGER PRIMARY KEY,producer_id INTEGER NOT NULL REFERENCES producers(id),observed_on TEXT NOT NULL,area_ha REAL NOT NULL,age_years REAL NOT NULL,harvest_kg REAL NOT NULL,price_fcfa_kg REAL NOT NULL,cost_fcfa REAL NOT NULL,agroforestry TEXT NOT NULL,disease TEXT NOT NULL,notes TEXT NOT NULL,created_at TEXT DEFAULT CURRENT_TIMESTAMP,UNIQUE(producer_id,observed_on));
 CREATE TABLE IF NOT EXISTS advice(id INTEGER PRIMARY KEY,producer_id INTEGER NOT NULL REFERENCES producers(id),content TEXT NOT NULL,author TEXT NOT NULL,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS attempts(key TEXT PRIMARY KEY,count INTEGER NOT NULL,started REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS predictions(id INTEGER PRIMARY KEY,producer_id INTEGER NOT NULL REFERENCES producers(id),inputs_json TEXT NOT NULL,area_ha REAL NOT NULL,productivity_t_ha REAL NOT NULL,estimated_total_kg REAL NOT NULL,model_version TEXT NOT NULL,author TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS prediction_producer ON predictions(producer_id);
 '''
 
 def create_app(config=None):
@@ -30,6 +34,7 @@ def create_app(config=None):
     app.config.update(DATABASE=os.environ.get('MONCACAO_DATABASE', str(ROOT/'instance'/'v1.sqlite')), COOKIE_SECURE=os.environ.get('MONCACAO_HTTPS')=='1', MAX_CONTENT_LENGTH=32768)
     if config:
         app.config.update(config)
+    app.extensions['predictor'] = Predictor(app.config.get('MODEL_PATH', ROOT/'model_productivite_xgb.pkl'))
     Path(app.config['DATABASE']).parent.mkdir(parents=True, exist_ok=True)
     with closing(sqlite3.connect(app.config['DATABASE'])) as db, db:
         db.executescript(SCHEMA)
@@ -70,6 +75,11 @@ def create_app(config=None):
     @app.errorhandler(ValueError)
     def invalid(exc):
         return error(str(exc))
+
+    @app.errorhandler(ModelUnavailable)
+    def model_unavailable(exc):
+        app.logger.error('Prediction unavailable', exc_info=True)
+        return error(str(exc),503)
 
     @app.errorhandler(413)
     def too_large(exc):
@@ -176,7 +186,27 @@ def create_app(config=None):
             return error('Producteur introuvable.',404)
         harvests = database().execute('SELECT * FROM harvests WHERE producer_id=? ORDER BY observed_on DESC,id DESC',(pid,))
         advice = database().execute('SELECT * FROM advice WHERE producer_id=? ORDER BY id DESC',(pid,))
-        return jsonify(producer=dict(row),harvests=[dict(h) for h in harvests],advice=[dict(a) for a in advice])
+        predictions = database().execute('SELECT * FROM predictions WHERE producer_id=? ORDER BY id DESC',(pid,))
+        history = []
+        for prediction in predictions:
+            item = dict(prediction)
+            item['inputs'] = json.loads(item.pop('inputs_json'))
+            history.append(item)
+        return jsonify(producer=dict(row),harvests=[dict(h) for h in harvests],advice=[dict(a) for a in advice],predictions=history)
+
+    @app.get('/api/prediction-schema')
+    def prediction_schema():
+        return jsonify(app.extensions['predictor'].schema())
+
+    @app.post('/api/producers/<int:pid>/predictions')
+    def add_prediction(pid):
+        if not owned(pid):
+            return error('Producteur introuvable.',404)
+        result = app.extensions['predictor'].predict(body())
+        with database() as db:
+            cursor = db.execute('''INSERT INTO predictions(producer_id,inputs_json,area_ha,productivity_t_ha,estimated_total_kg,model_version,author)
+                VALUES (?,?,?,?,?,?,?)''',(pid,json.dumps(result['inputs'],ensure_ascii=False),result['area_ha'],result['productivity_t_ha'],result['estimated_total_kg'],result['model_version'],g.user['name']))
+        return jsonify(id=cursor.lastrowid,**result),201
 
     def harvest_data(data):
         observed = date.fromisoformat(text(data,'observed_on',10))

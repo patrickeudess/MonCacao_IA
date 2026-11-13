@@ -7,8 +7,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PORT=5000
 WORKDIR /app
 COPY requirements.txt ./
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir -r requirements.txt
-COPY api_server.py v1.py ./
+COPY api_server.py v1.py prediction_service.py model_productivite_xgb.pkl ./
 COPY templates ./templates
 COPY static ./static
 RUN mkdir -p /data

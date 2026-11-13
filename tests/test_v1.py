@@ -133,4 +133,48 @@ class AppTests(unittest.TestCase):
         self.assertEqual(result.exit_code,0,result.output)
         with closing(sqlite3.connect(target)) as db:self.assertEqual(db.execute('SELECT name FROM producers WHERE id=?',(pid,)).fetchone()[0],'Awa')
 
+    def prediction_payload(self):
+        schema=self.client.get('/api/prediction-schema')
+        self.assertEqual(schema.status_code,200,schema.json)
+        inputs={f['name']: (10 if f['name']=='Age_verger' else 400000) if f['type']=='number' else f['options'][0] for f in schema.json['fields']}
+        return {'inputs':inputs,'area_ha':2}
+
+    def test_real_model_prediction_saved_and_isolated_from_harvests(self):
+        import joblib
+        import pandas as pd
+        from v1 import ROOT
+        pid=self.producer()
+        data=self.prediction_payload()
+        original=joblib.load(ROOT/'model_productivite_xgb.pkl')
+        expected=float(original.predict(pd.DataFrame([data['inputs']]))[0])
+        result=self.client.post(f'/api/producers/{pid}/predictions',json=data,headers=self.headers)
+        self.assertEqual(result.status_code,201,result.json)
+        self.assertAlmostEqual(result.json['productivity_t_ha'],expected,places=6)
+        self.assertAlmostEqual(result.json['estimated_total_kg'],expected*2000,places=6)
+        self.assertNotIn('confidence',result.json)
+        detail=self.client.get(f'/api/producers/{pid}').json
+        self.assertEqual(detail['predictions'][0]['inputs'],data['inputs'])
+        self.assertEqual(detail['predictions'][0]['author'],'Alice')
+        self.assertEqual(detail['harvests'],[])
+        self.assertEqual(self.client.get('/api/dashboard').json['kg'],0)
+        self.login('bob@example.test')
+        self.assertEqual(self.client.post(f'/api/producers/{pid}/predictions',json=data,headers=self.headers).status_code,404)
+        self.assertEqual(self.client.get(f'/api/producers/{pid}').status_code,404)
+
+    def test_prediction_validation_and_unavailable_model(self):
+        from prediction_service import Predictor
+        pid=self.producer()
+        data=self.prediction_payload()
+        for area in [0,-1,True,'2',float('nan')]:
+            bad={'inputs':data['inputs'],'area_ha':area}
+            self.assertEqual(self.client.post(f'/api/producers/{pid}/predictions',json=bad,headers=self.headers).status_code,400)
+        for key,value in [('Age_verger',-1),('Coût_production/ha','400000'),('Région','Unknown')]:
+            bad={'inputs':{**data['inputs'],key:value},'area_ha':2}
+            self.assertEqual(self.client.post(f'/api/producers/{pid}/predictions',json=bad,headers=self.headers).status_code,400)
+        self.assertEqual(self.client.post(f'/api/producers/{pid}/predictions',json=data,headers={'X-Requested-With':'MonCacao'}).status_code,403)
+        self.app.extensions['predictor']=Predictor(Path(self.tmp.name)/'missing.pkl')
+        with self.assertLogs(self.app.logger,level='ERROR'):
+            self.assertEqual(self.client.post(f'/api/producers/{pid}/predictions',json=data,headers=self.headers).status_code,503)
+        self.assertEqual(self.client.get(f'/api/producers/{pid}').json['predictions'],[])
+
 if __name__=='__main__':unittest.main()
