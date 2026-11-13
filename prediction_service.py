@@ -6,15 +6,15 @@ from threading import Lock
 
 MODEL_SHA256 = '10d48fa23b05da63acea8133f1163ef73841b017e1346e4d395c758ffe6bc68f'
 NUMERIC = {
-    'Coût_production/ha': ('Coût de production (FCFA/ha)', 0, 1000000000),
-    'Age_verger': ('Âge du verger (années)', 0, 150),
+    'Coût_production/ha': ('Dépenses par hectare (FCFA)', 0, 1000000000),
+    'Age_verger': ('Âge des cacaoyers (années)', 0, 150),
 }
 LABELS = {
-    'Région': 'Région', 'Pluviometrie': 'Pluviométrie', 'Sexe': 'Sexe du producteur',
-    'Niveau_education': 'Niveau d’éducation', 'Competences': 'Lecture et écriture',
-    'Engrais chimique': 'Utilisation d’engrais chimique', 'Agroforesterie': 'Agroforesterie',
-    'fumier/ compost': 'Utilisation de fumier / compost', 'Herbicide': 'Utilisation d’herbicide',
-    'Insecticide': 'Utilisation d’insecticide', 'Fongicide': 'Utilisation de fongicide',
+    'Région': 'Région', 'Pluviometrie': 'Quantité de pluie', 'Sexe': 'Sexe du producteur',
+    'Niveau_education': 'Niveau scolaire', 'Competences': 'Lecture et écriture',
+    'Engrais chimique': 'Utilisation d’engrais chimique', 'Agroforesterie': 'Autres arbres dans la plantation',
+    'fumier/ compost': 'Fumier ou compost', 'Herbicide': 'Produit contre les mauvaises herbes',
+    'Insecticide': 'Produit contre les insectes', 'Fongicide': 'Produit contre les champignons',
     'Maladie': 'Maladie observée',
 }
 
@@ -51,7 +51,7 @@ class Predictor:
                 model.named_steps['model'].set_params(n_jobs=1)
                 self.columns, self.categories, self.model = columns, categories, model
             except Exception as exc:
-                raise ModelUnavailable('Le modèle est indisponible. Aucune estimation simulée ne sera enregistrée.') from exc
+                raise ModelUnavailable('Le calcul est indisponible. Réessayez plus tard.') from exc
 
     def schema(self):
         self.load()
@@ -68,7 +68,7 @@ class Predictor:
         self.load()
         inputs = data.get('inputs')
         if not isinstance(inputs, dict) or set(inputs) != set(self.columns):
-            raise ValueError('Renseignez tous les paramètres du modèle, sans champ supplémentaire.')
+            raise ValueError('Complétez tous les champs du formulaire.')
         clean = {}
         for name in self.columns:
             value = inputs[name]
@@ -88,6 +88,6 @@ class Predictor:
             if not math.isfinite(value) or value < 0:
                 raise RuntimeError('Invalid model result')
         except Exception as exc:
-            raise ModelUnavailable('Le modèle n’a pas pu produire une estimation valide. Aucun résultat enregistré.') from exc
+            raise ModelUnavailable('Le calcul a échoué. Aucun résultat n’a été enregistré.') from exc
         return dict(inputs=clean, area_ha=area, productivity_t_ha=value,
                     estimated_total_kg=value*1000*area, model_version=MODEL_SHA256)
