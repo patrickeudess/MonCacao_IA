@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: moncacao-ia
+    runtime: docker
+    repo: https://github.com/patrickeudess/MonCacao_IA
+    branch: main
+    plan: 0.5c-512mb
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    numInstances: 1
+    autoDeployTrigger: 'off'
+    disk:
+      name: moncacao-data
+      mountPath: /data
+      sizeGB: 1
+
