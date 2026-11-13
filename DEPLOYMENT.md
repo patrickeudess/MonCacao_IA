@@ -1,315 +1,33 @@
-# 🚀 Guide de Déploiement - Mon Cacao
+# Mise en service du pilote
 
-Ce guide vous aidera à déployer l'application Mon Cacao sur différents environnements.
+Cette livraison est une version locale testée, pas un déploiement public.
 
-## 📋 Prérequis
+## Serveur
 
-- Python 3.8 ou supérieur
-- pip installé
-- Accès à un serveur web (pour le déploiement production)
-- Navigateur web moderne
+Installer Python 3.12 et les dépendances de requirements.txt dans un environnement isolé. Lancer `python api_server.py` avec un superviseur de processus et un reverse proxy HTTPS. Ne pas servir le dossier du dépôt avec un serveur de fichiers : il contient des données historiques et le modèle. Seuls Flask et son dossier static doivent être exposés.
 
-## 🔧 Déploiement Local
+Variables :
+- `MONCACAO_DATABASE` : chemin absolu d'une base SQLite sur un disque persistant, hors du dossier public.
+- `MONCACAO_HTTPS=1` : cookie Secure obligatoire derrière HTTPS.
+- `PORT` : port interne, 5000 par défaut.
+- `MONCACAO_HOST` : 127.0.0.1 par défaut ; ne changer que selon la configuration réseau de l'hébergement.
 
-### Étape 1: Préparation
+Créer les comptes par `python -m flask --app v1:create_app create-professional`. Les mots de passe sont hachés avec Werkzeug ; les jetons de session sont aléatoires, stockés hachés côté serveur et envoyés dans un cookie HttpOnly/SameSite. Les écritures exigent un jeton CSRF. Chaque requête vérifie le propriétaire des producteurs. Dix essais de connexion par identifiant sont autorisés sur quinze minutes ; prévoir également une limitation par adresse côté reverse proxy pour un pilote exposé.
 
-```bash
-# Cloner ou télécharger le projet
-cd mon-cacao
+La base SQLite convient à un petit pilote sur une instance avec disque local persistant. Ne pas utiliser un système de fichiers réseau ou éphémère ni multiplier les instances avec des copies séparées de la base. Les pages et réponses ne sont pas mises en cache. Une connexion réseau est nécessaire pour enregistrer.
 
-# Créer un environnement virtuel
-python -m venv venv
+## Données existantes
 
-# Activer l'environnement virtuel
-# Windows
-venv\Scripts\activate
-# Linux/Mac
-source venv/bin/activate
+Les données et le modèle historiques sont conservés. Aucun volume, prix, compte ou identité n'est migré automatiquement. Préparer un import explicite et vérifiable avant d'utiliser la V1 comme remplacement du système existant : mapping des propriétaires, unités, dates, doublons, effectifs avant/après, et sauvegarde préalable. Les anciennes soumissions ne sont pas nécessairement des récoltes distinctes.
 
-# Installer les dépendances
-pip install -r requirements.txt
-```
+## Avant ouverture aux utilisateurs
 
-### Étape 2: Vérifier le modèle
+1. Configurer HTTPS, cookie Secure, disque persistant et sauvegardes hors du serveur.
+2. Créer les vrais comptes, sans réutiliser le compte de vérification local.
+3. Vérifier la restauration d'une sauvegarde et les droits d'accès sur l'hébergement choisi.
+4. Faire valider les champs et les conseils par les professionnels du pilote.
+5. Confirmer les règles de collecte, de conservation et d'accès avec l'organisation responsable.
 
-```bash
-# Vérifier que le modèle existe
-ls backend/model_productivite_xgb.pkl
+## Revenir à la version précédente
 
-# Si le modèle n'existe pas, l'entraîner
-cd backend
-python train_model.py
-cd ..
-```
-
-### Étape 3: Lancer le serveur backend
-
-```bash
-# Depuis la racine du projet
-python backend/api_server.py
-```
-
-Le serveur démarre sur `http://localhost:5000`
-
-### Étape 4: Ouvrir le frontend
-
-**Option A: Ouvrir directement**
-- Ouvrez `frontend/index.html` dans votre navigateur
-
-**Option B: Serveur local**
-```bash
-cd frontend
-python -m http.server 8000
-# Ouvrez http://localhost:8000/index.html
-```
-
-## 🌐 Déploiement Production
-
-### Option 1: Serveur Dédié (Linux)
-
-#### Installation
-
-```bash
-# Mettre à jour le système
-sudo apt update
-sudo apt upgrade -y
-
-# Installer Python et pip
-sudo apt install python3 python3-pip python3-venv -y
-
-# Cloner le projet
-git clone https://github.com/votre-username/mon-cacao.git
-cd mon-cacao
-
-# Créer l'environnement virtuel
-python3 -m venv venv
-source venv/bin/activate
-
-# Installer les dépendances
-pip install -r requirements.txt
-```
-
-#### Configuration avec Gunicorn
-
-```bash
-# Installer Gunicorn
-pip install gunicorn
-
-# Créer un fichier de configuration
-cat > gunicorn_config.py << EOF
-bind = "0.0.0.0:5000"
-workers = 4
-worker_class = "sync"
-timeout = 120
-keepalive = 5
-EOF
-
-# Lancer avec Gunicorn
-gunicorn -c gunicorn_config.py backend.api_server:app
-```
-
-#### Service Systemd (Démarrage automatique)
-
-```bash
-# Créer le service
-sudo nano /etc/systemd/system/mon-cacao.service
-```
-
-Contenu du fichier :
-
-```ini
-[Unit]
-Description=Mon Cacao API Server
-After=network.target
-
-[Service]
-User=www-data
-Group=www-data
-WorkingDirectory=/chemin/vers/mon-cacao
-Environment="PATH=/chemin/vers/mon-cacao/venv/bin"
-ExecStart=/chemin/vers/mon-cacao/venv/bin/gunicorn -c gunicorn_config.py backend.api_server:app
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-# Activer et démarrer le service
-sudo systemctl daemon-reload
-sudo systemctl enable mon-cacao
-sudo systemctl start mon-cacao
-
-# Vérifier le statut
-sudo systemctl status mon-cacao
-```
-
-#### Configuration Nginx (Reverse Proxy)
-
-```bash
-# Installer Nginx
-sudo apt install nginx -y
-
-# Créer la configuration
-sudo nano /etc/nginx/sites-available/mon-cacao
-```
-
-Contenu :
-
-```nginx
-server {
-    listen 80;
-    server_name votre-domaine.com;
-
-    # Frontend
-    location / {
-        root /chemin/vers/mon-cacao/frontend;
-        index index.html;
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Backend API
-    location /api {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-```bash
-# Activer le site
-sudo ln -s /etc/nginx/sites-available/mon-cacao /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-```
-
-### Option 2: Heroku
-
-#### Préparation
-
-```bash
-# Installer Heroku CLI
-# https://devcenter.heroku.com/articles/heroku-cli
-
-# Se connecter
-heroku login
-
-# Créer l'application
-heroku create mon-cacao-app
-
-# Créer Procfile
-echo "web: gunicorn backend.api_server:app" > Procfile
-
-# Déployer
-git push heroku main
-```
-
-### Option 3: Docker (À venir)
-
-Un fichier `Dockerfile` sera ajouté dans une future version.
-
-## 🔒 Sécurité
-
-### Recommandations
-
-1. **Variables d'environnement** : Utilisez des variables d'environnement pour les secrets
-2. **HTTPS** : Configurez SSL/TLS pour la production
-3. **Firewall** : Limitez l'accès aux ports nécessaires
-4. **Mises à jour** : Maintenez les dépendances à jour
-5. **Backup** : Sauvegardez régulièrement la base de données
-
-### Configuration HTTPS avec Let's Encrypt
-
-```bash
-# Installer Certbot
-sudo apt install certbot python3-certbot-nginx -y
-
-# Obtenir le certificat
-sudo certbot --nginx -d votre-domaine.com
-
-# Renouvellement automatique
-sudo certbot renew --dry-run
-```
-
-## 📊 Monitoring
-
-### Logs
-
-```bash
-# Logs du service
-sudo journalctl -u mon-cacao -f
-
-# Logs Nginx
-sudo tail -f /var/log/nginx/access.log
-sudo tail -f /var/log/nginx/error.log
-```
-
-### Performance
-
-- Utilisez un outil de monitoring comme Prometheus ou Grafana
-- Surveillez l'utilisation CPU et mémoire
-- Surveillez les temps de réponse de l'API
-
-## 🔄 Mise à Jour
-
-```bash
-# Arrêter le service
-sudo systemctl stop mon-cacao
-
-# Mettre à jour le code
-git pull origin main
-
-# Réinstaller les dépendances si nécessaire
-source venv/bin/activate
-pip install -r requirements.txt --upgrade
-
-# Redémarrer le service
-sudo systemctl start mon-cacao
-```
-
-## 🐛 Dépannage
-
-### Le service ne démarre pas
-
-```bash
-# Vérifier les logs
-sudo journalctl -u mon-cacao -n 50
-
-# Vérifier les permissions
-ls -la /chemin/vers/mon-cacao
-
-# Vérifier le chemin Python
-which python3
-```
-
-### L'API ne répond pas
-
-```bash
-# Vérifier que le service est actif
-sudo systemctl status mon-cacao
-
-# Vérifier les ports
-sudo netstat -tlnp | grep 5000
-
-# Tester l'API
-curl http://localhost:5000/health
-```
-
-### Problèmes de CORS
-
-- Vérifiez que `flask-cors` est installé
-- Vérifiez la configuration CORS dans `backend/api_server.py`
-
-## 📞 Support
-
-Pour toute question ou problème de déploiement :
-- Ouvrez une issue sur GitHub
-- Consultez la documentation
-- Vérifiez les logs d'erreur
-
----
-
-*Dernière mise à jour : Décembre 2024*
-
+Le point de départ du travail est le commit f0994e6306f7121ac4e181d07351a25097e8bcaf du dépôt MonCacao_IA. L'ancienne application reste récupérable dans Git. Les bases de l'ancienne application et de la V1 sont séparées ; revenir au code précédent ne convertit pas les données V1.

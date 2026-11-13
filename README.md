@@ -1,212 +1,61 @@
-# 🌱 Frontend MON CACAO - IA PRÉDICTIVE
+# Mon Cacao — première version professionnelle
 
-## 📁 Structure des fichiers
+Une application Flask pour suivre les producteurs et les données réelles collectées sur le terrain.
 
-```
-📦 frontend/
-├── 🏠 index.html              # Page d'accueil avec authentification
-├── 📊 dashboard.html           # Tableau de bord principal
-├── 🎯 prediction.html          # Page de prédiction IA
-├── 📈 analyse.html             # Analyses détaillées
-├── 📥 soumettre.html           # Soumission de données
-├── 📂 historique.html          # Historique des données
-├── 🌱 score-ecologique.html    # Scores écologiques
-├── 🤖 assistant.html           # Assistant IA
-├── 💡 conseils.html            # Conseils personnalisés
-├── 💰 revenue.html             # Analyse des revenus
-├── 📊 production.html          # Suivi de production
-├── 💵 revenus.html             # Gestion des revenus
-├── 📁 css/                     # Styles et thèmes
-├── 📁 js/                      # Scripts JavaScript
-└── 📋 README.md                # Documentation
-```
+## Périmètre
 
-## 🚀 Fonctionnalités principales
+- Connexion professionnelle, session de huit heures et déconnexion.
+- Création, recherche et modification des fiches producteurs.
+- Saisie et correction des récoltes : date, surface, âge du verger, poids, prix, coûts et observations.
+- Historique par producteur et conseils datés, attribués au professionnel qui les saisit.
+- Tableau de bord : producteurs, nombre de récoltes, poids et revenus calculés.
+- Exports CSV des producteurs, récoltes et conseils.
 
-### ✅ **Système d'authentification intégré**
-- **Page d'accueil** avec connexion/inscription
-- **Validation des formulaires** en temps réel
-- **Politique RGPD** obligatoire
-- **Redirection sécurisée** vers l'application
+Les comptes producteurs, assistant IA, prédictions, score écologique, messagerie, notifications, badges, cartographie, rapports PDF et synchronisation hors ligne ont été retirés du parcours et du serveur V1. Les versions précédentes restent dans Git. Le modèle et le script d'entraînement sont conservés pour un travail ultérieur ; ils ne sont pas exécutés par la V1. Le script historique génère des données synthétiques : cela ne permet pas de conclure à la provenance du modèle livré ni à celle des données terrain du propriétaire.
 
-### ✅ **Interface utilisateur moderne**
-- **Design responsive** pour tous les appareils
-- **Thème cohérent** avec l'identité MON CACAO
-- **Navigation fluide** entre les pages
-- **Animations CSS** et transitions
+## Lancement local (PowerShell, Python 3.12)
 
-### ✅ **Pages spécialisées**
-- **Prédictions IA** de la productivité
-- **Analyses détaillées** des données
-- **Scores écologiques** et durabilité
-- **Assistant IA** personnalisé
-- **Conseils agricoles** adaptés
-
-## 🔐 Authentification
-
-### **Page d'accueil (`index.html`)**
-- Interface de connexion et inscription
-- Validation des données utilisateur
-- Acceptation de la politique RGPD
-- Redirection vers le tableau de bord
-
-### **Sécurité**
-- Validation côté client et serveur
-- Hachage sécurisé des mots de passe
-- Gestion des sessions utilisateur
-- Protection des données personnelles
-
-## 🎨 Design et UX
-
-### **Thème visuel**
-- **Couleurs principales** : Vert cacao (#2E8B57)
-- **Couleurs secondaires** : Vert foncé (#1a472a)
-- **Accents** : Or (#FFD700)
-- **Typographie** : Segoe UI, moderne et lisible
-
-### **Responsive Design**
-- **Mobile First** approach
-- **Breakpoints** : 768px, 1024px, 1200px
-- **Grille flexible** CSS Grid et Flexbox
-- **Images adaptatives** et optimisées
-
-## 📱 Compatibilité
-
-### **Navigateurs supportés**
-- ✅ Chrome 90+
-- ✅ Firefox 88+
-- ✅ Safari 14+
-- ✅ Edge 90+
-
-### **Appareils**
-- ✅ Ordinateurs de bureau
-- ✅ Tablettes
-- ✅ Smartphones
-- ✅ Écrans tactiles
-
-## 🚀 Démarrage rapide
-
-### **1. Ouvrir la page d'accueil**
-```bash
-# Ouvrir index.html dans un navigateur
-open frontend/index.html
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m flask --app v1:create_app create-professional
+.\.venv\Scripts\python.exe api_server.py
 ```
 
-### **2. Créer un compte**
-- Cliquer sur "📝 Inscription"
-- Remplir le formulaire
-- Accepter la politique RGPD
-- Valider l'inscription
+Ouvrir http://localhost:5000. L'administrateur crée le compte avec les invites de la commande ; le mot de passe n'est pas affiché. Aucun compte ni mot de passe par défaut n'est livré. Si le port est occupé, définir `$env:PORT = "5050"` avant le lancement.
 
-### **3. Se connecter**
-- Utiliser vos identifiants
-- Accéder au tableau de bord
-- Naviguer entre les fonctionnalités
+## Données et unités
 
-## 🔧 Développement
+La V1 utilise `instance/v1.sqlite`, distincte de `data.sqlite` et de l'ancienne base `mon_cacao.db`. Elle ne modifie ni n'importe automatiquement les anciennes données. Leur reprise est une étape séparée : confirmer le propriétaire de chaque fiche, la signification des dates, les unités et le caractère cumulé ou individuel des volumes avant import. Les identifiants des anciens comptes locaux ne sont pas assimilés aux nouveaux comptes.
 
-### **Structure CSS**
-- **Variables CSS** pour la cohérence
-- **Classes utilitaires** pour la réutilisation
-- **Media queries** pour le responsive
-- **Animations** et transitions
+Une ligne représente une récolte d'un producteur à une date. Si plusieurs collectes ont lieu le même jour, les regrouper et utiliser un prix moyen pondéré ; ne pas ressaisir un cumul déjà enregistré. Les coûts concernent cette récolte, pas l'ensemble de l'exploitation. Le revenu est `poids en kg × prix FCFA/kg`. Le tableau de bord cumule toutes les dates et ne présente pas de rendement annuel ni de bénéfice net.
 
-### **JavaScript**
-- **Validation des formulaires**
-- **Gestion des onglets**
-- **Messages d'état**
-- **Navigation fluide**
+Les conseils sont rédigés par le professionnel ; le logiciel ne certifie pas une validation agronomique. Il ne fournit pas de recommandation automatique de traitement.
 
-### **Intégration**
-- **API backend** pour l'authentification
-- **Base de données** SQLite
-- **Sessions sécurisées**
-- **Gestion des erreurs**
+## Administration
 
-## 📊 Pages et fonctionnalités
+```powershell
+.\.venv\Scripts\python.exe -m flask --app v1:create_app reset-password
+.\.venv\Scripts\python.exe -m flask --app v1:create_app backup backups/sauvegarde-2026-11-13.sqlite
+```
 
-### **🏠 Accueil (`index.html`)**
-- Authentification utilisateur
-- Présentation de l'application
-- Politique de confidentialité
-- Navigation vers les fonctionnalités
+La réinitialisation révoque les sessions du compte. La sauvegarde refuse d'écraser un fichier existant et utilise l'API de sauvegarde SQLite. Pour restaurer : arrêter le serveur, conserver une copie de la base actuelle, copier une sauvegarde vérifiée à l'emplacement configuré, puis redémarrer et vérifier les comptes et effectifs.
 
-### **📊 Tableau de bord (`dashboard.html`)**
-- Vue d'ensemble des données
-- Statistiques principales
-- Accès rapide aux fonctionnalités
-- Notifications et alertes
+## Vérifications
 
-### **🎯 Prédictions (`prediction.html`)**
-- Interface de saisie des données
-- Modèles IA pour la productivité
-- Résultats et recommandations
-- Historique des prédictions
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+node --check static/app.js
+```
 
-### **📈 Analyses (`analyse.html`)**
-- Visualisations interactives
-- Graphiques et tableaux
-- Filtres et sélections
-- Export des données
+Les tests utilisent des bases temporaires séparées. Ils couvrent le parcours, les calculs, la persistance, l'isolation des comptes, CSRF, expiration et révocation de session, limitation des connexions, validation des données, doublons, CSV et sauvegarde. Une vérification manuelle dans le navigateur couvre connexion, création d'une fiche, récolte, conseil et affichage mobile à 390 px.
 
-### **🌱 Score écologique (`score-ecologique.html`)**
-- Calcul des scores de durabilité
-- Recommandations d'amélioration
-- Comparaisons et benchmarks
-- Rapports détaillés
+## Structure
 
-### **🤖 Assistant IA (`assistant.html`)**
-- Chat intelligent
-- Conseils personnalisés
-- Aide contextuelle
-- Historique des conversations
+- `v1.py` : API, validation, accès aux données et commandes d'administration.
+- `api_server.py` : lancement Waitress sans débogueur.
+- `templates/index.html`, `static/` : interface française sans dépendance CDN.
+- `tests/` : tests d'intégration.
+- `requirements-model.txt` : anciennes dépendances, conservées uniquement pour la recherche sur le modèle.
 
-## 🛡️ Sécurité et conformité
-
-### **RGPD et protection des données**
-- **Consentement explicite** requis
-- **Politique de confidentialité** accessible
-- **Droits des utilisateurs** respectés
-- **Sécurisation** des données personnelles
-
-### **Authentification sécurisée**
-- **Hachage des mots de passe** (SHA-256)
-- **Sessions sécurisées** avec tokens
-- **Protection contre les attaques**
-- **Audit des connexions**
-
-## 🔄 Maintenance et mises à jour
-
-### **Versioning**
-- **Version actuelle** : 2.0
-- **Compatibilité** : Backward compatible
-- **Mises à jour** : Incrémentales
-- **Documentation** : Toujours à jour
-
-### **Support**
-- **Tests automatisés** inclus
-- **Documentation complète**
-- **Exemples d'utilisation**
-- **Guide de dépannage**
-
-## 🎯 Prochaines étapes
-
-### **Améliorations prévues**
-- 🔐 Authentification à deux facteurs
-- 📧 Vérification par email
-- 🔄 Récupération de mot de passe
-- 📱 Application mobile native
-
-### **Fonctionnalités avancées**
-- 🛡️ Détection d'anomalies
-- 📍 Géolocalisation des connexions
-- ⏰ Horaires d'accès personnalisés
-- 🔒 Chiffrement end-to-end
-
----
-
-**🚀 Prêt pour la production !**
-
-*Dernière mise à jour : Décembre 2024*
-*Version : 2.0*
-*Statut : Approuvé et en vigueur*
+Voir DEPLOYMENT.md pour le passage à un pilote hébergé.
