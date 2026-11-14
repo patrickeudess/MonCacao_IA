@@ -12,7 +12,7 @@ Une application Flask pour suivre les producteurs et les données réelles colle
 - Tableau de bord : producteurs, nombre de récoltes, poids et revenus calculés.
 - Exports CSV des producteurs, récoltes et conseils.
 
-Les comptes producteurs, assistant IA, score écologique, messagerie, notifications, badges, cartographie, rapports PDF et synchronisation hors ligne ont été retirés du parcours et du serveur V1. Les versions précédentes restent dans Git. Le modèle existant est chargé pour les prédictions ; le script d’entraînement reste séparé et n’est jamais exécuté par l’application. Le script historique génère des données synthétiques : cela ne permet pas de conclure à la provenance du modèle livré ni à celle des données terrain du propriétaire.
+L’assistant IA, score écologique, messagerie, notifications, badges, cartographie, rapports PDF et synchronisation hors ligne ont été retirés du parcours et du serveur V1. Les versions précédentes restent dans Git. Le modèle existant est chargé pour les prédictions ; le script d’entraînement reste séparé et n’est jamais exécuté par l’application. Le script historique génère des données synthétiques : cela ne permet pas de conclure à la provenance du modèle livré ni à celle des données terrain du propriétaire.
 
 ## Lancement local (PowerShell, Python 3.12)
 
@@ -68,3 +68,12 @@ Dans une fiche producteur, cliquer sur **Estimer le rendement**. Saisir la surfa
 Le serveur appelle le pipeline complet du fichier `model_productivite_xgb.pkl`, sans réentraînement ni simulation de secours. Il enregistre les entrées, la surface, le résultat en t/ha, la quantité estimée en kg, l’auteur et l’empreinte SHA-256 du modèle. La quantité est `rendement × 1 000 × surface`. Les estimations ne sont jamais ajoutées aux récoltes réelles ni aux totaux du tableau de bord. Aucun pourcentage de confiance n’est calculé. L’horizon temporel et la performance sur un jeu de validation terrain ne sont pas documentés par ce fichier ; l’interface ne présente pas le résultat comme annuel ni comme garanti.
 
 Le modèle est chargé une fois par processus, uniquement si son empreinte correspond à l’artefact examiné. Une absence, une incompatibilité ou une empreinte différente renvoie une erreur 503 ; les autres fonctions de suivi restent disponibles. La table d’historique est créée sans modifier les récoltes existantes. L’application conserve les données terrain sans les utiliser pour réentraîner automatiquement le modèle.
+
+
+## Espace producteur
+
+Depuis la connexion, choisir « Je suis producteur : créer mon compte ». Un compte producteur possède sa propre fiche, créée à l’inscription. Il peut estimer sa production, ajouter et corriger ses récoltes, écrire ses notes et télécharger ses données. Les estimations restent séparées des récoltes mesurées.
+
+L’inscription crée uniquement un rôle producteur. Les comptes professionnels existants sont conservés et continuent à gérer leurs producteurs. Les accès restent limités au propriétaire du compte, y compris pour les téléchargements. Aucune fiche détenue par un conseiller n’est transférée automatiquement lors d’une inscription.
+
+L’inscription utilise actuellement une adresse email, sans vérification par email ni récupération automatique du mot de passe. Le responsable utilise la commande de réinitialisation existante si nécessaire. Le mot de passe doit comporter au moins 12 caractères. L’inscription est limitée à cinq demandes par adresse réseau sur quinze minutes. Derrière un proxy, prévoir une limitation supplémentaire à l’entrée ; l’application ne fait pas confiance aux en-têtes réseau transmis par le client.

@@ -43,6 +43,51 @@ class AppTests(unittest.TestCase):
     def harvest(self, **changes):
         return dict(observed_on='2026-01-15',area_ha=2,age_years=10,harvest_kg=500,price_fcfa_kg=1800,cost_fcfa=100000,agroforestry='Oui',disease='Non',notes='Récolte distincte',**changes)
 
+    def test_producer_self_registration_and_private_workflow(self):
+        other_pid=self.producer()
+        guest=self.app.test_client()
+        payload=dict(name='Kouassi',region='San-Pedro',email='kouassi@example.test',password=self.password,password_confirm=self.password,role='professional')
+        basic={'X-Requested-With':'MonCacao'}
+        self.assertEqual(guest.post('/api/register',json=payload).status_code,403)
+        self.assertEqual(guest.post('/api/register',json=payload,headers={**basic,'Sec-Fetch-Site':'cross-site'}).status_code,403)
+        self.assertEqual(guest.post('/api/register',json={**payload,'password_confirm':'different'},headers=basic).status_code,400)
+        self.assertEqual(guest.post('/api/register',json=payload,headers=basic).status_code,201)
+        self.assertEqual(guest.post('/api/register',json=payload,headers=basic).status_code,409)
+        login=guest.post('/api/login',json={'email':payload['email'],'password':self.password},headers=basic)
+        self.assertEqual(login.json['user']['role'],'producer')
+        self.assertEqual(guest.get('/api/me').json['user']['role'],'producer')
+        headers={**basic,'X-CSRF-Token':login.json['csrf']}
+        profiles=guest.get('/api/producers').json['producers']
+        self.assertEqual(len(profiles),1)
+        pid=profiles[0]['id']
+        self.assertEqual(profiles[0]['name'],'Kouassi')
+        self.assertEqual(guest.post('/api/producers',json={'name':'Other','region':'X'},headers=headers).status_code,403)
+        self.assertEqual(guest.get(f'/api/producers/{other_pid}').status_code,404)
+        self.assertEqual(guest.post(f'/api/producers/{other_pid}/harvests',json=self.harvest(),headers=headers).status_code,404)
+        self.assertEqual(guest.post(f'/api/producers/{pid}/harvests',json=self.harvest(),headers=headers).status_code,201)
+        prediction=self.prediction_payload()
+        self.assertEqual(guest.post(f'/api/producers/{pid}/predictions',json=prediction,headers=headers).status_code,201)
+        self.assertEqual(guest.get('/api/dashboard').json['kg'],500)
+        self.assertNotIn('Awa',guest.get('/api/export/harvests').text)
+        self.assertEqual(self.client.get(f'/api/producers/{pid}').status_code,404)
+        restarted=create_app({'TESTING':True,'DATABASE':self.path}).test_client()
+        again=restarted.post('/api/login',json={'email':payload['email'],'password':self.password},headers=basic)
+        self.assertEqual(again.json['user']['role'],'producer')
+        self.assertEqual(len(restarted.get(f'/api/producers/{pid}').json['predictions']),1)
+
+    def test_registration_rate_limit_and_migration(self):
+        guest=self.app.test_client()
+        for i in range(5):
+            self.assertEqual(guest.post('/api/register',json={},headers={'X-Requested-With':'MonCacao'}).status_code,400)
+        self.assertEqual(guest.post('/api/register',json={},headers={'X-Requested-With':'MonCacao'}).status_code,429)
+        self.assertEqual(self.client.get('/api/me').json['user']['role'],'professional')
+        legacy=str(Path(self.tmp.name)/'legacy.sqlite')
+        with closing(sqlite3.connect(legacy)) as db,db:
+            db.execute('CREATE TABLE professionals(id INTEGER PRIMARY KEY,name TEXT NOT NULL,email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL)')
+            db.execute('INSERT INTO professionals VALUES (1,?,?,?)',('Alice','alice@example.test',self.hashed))
+        migrated=create_app({'TESTING':True,'DATABASE':legacy}).test_client()
+        self.assertEqual(self.login(client=migrated).json['user']['role'],'professional')
+
     def test_complete_workflow_and_persistence(self):
         pid=self.producer()
         r=self.client.post(f'/api/producers/{pid}/harvests',json=self.harvest(),headers=self.headers)

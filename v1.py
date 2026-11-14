@@ -6,6 +6,7 @@ import io
 import json
 import math
 import os
+import re
 import secrets
 import sqlite3
 import time
@@ -38,6 +39,8 @@ def create_app(config=None):
     Path(app.config['DATABASE']).parent.mkdir(parents=True, exist_ok=True)
     with closing(sqlite3.connect(app.config['DATABASE'])) as db, db:
         db.executescript(SCHEMA)
+        if 'role' not in {r[1] for r in db.execute('PRAGMA table_info(professionals)')}:
+            db.execute("ALTER TABLE professionals ADD COLUMN role TEXT NOT NULL DEFAULT 'professional' CHECK(role IN ('professional','producer'))")
 
     def database():
         if 'db' not in g:
@@ -92,10 +95,10 @@ def create_app(config=None):
         writing = request.method in ('POST','PUT','DELETE','PATCH')
         if writing and (request.headers.get('X-Requested-With')!='MonCacao' or request.headers.get('Sec-Fetch-Site')=='cross-site'):
             return error('Requête non autorisée.',403)
-        if request.path=='/api/login':
+        if request.path in ('/api/login','/api/register'):
             return
         token_hash = hashlib.sha256(request.cookies.get('mc_session','').encode()).hexdigest()
-        row = database().execute('SELECT p.id,p.name,p.email,s.csrf,s.token_hash FROM sessions s JOIN professionals p ON p.id=s.user_id WHERE s.token_hash=? AND s.expires>?',(token_hash,time.time())).fetchone()
+        row = database().execute('SELECT p.id,p.name,p.email,p.role,s.csrf,s.token_hash FROM sessions s JOIN professionals p ON p.id=s.user_id WHERE s.token_hash=? AND s.expires>?',(token_hash,time.time())).fetchone()
         if not row:
             return error('Connectez-vous pour continuer.',401)
         g.user = dict(row)
@@ -136,13 +139,39 @@ def create_app(config=None):
             db.execute('DELETE FROM attempts WHERE key=?',(key,))
             db.execute('DELETE FROM sessions WHERE expires<? OR token_hash=?',(now,hashlib.sha256(request.cookies.get('mc_session','').encode()).hexdigest()))
             db.execute('INSERT INTO sessions VALUES (?,?,?,?)',(hashlib.sha256(raw.encode()).hexdigest(),user['id'],csrf,now+28800))
-        response = jsonify(user={'name':user['name'],'email':user['email']},csrf=csrf)
+        response = jsonify(user={'name':user['name'],'email':user['email'],'role':user['role']},csrf=csrf)
         response.set_cookie('mc_session',raw,httponly=True,secure=app.config['COOKIE_SECURE'],samesite='Lax',max_age=28800)
         return response
 
     @app.get('/api/me')
     def me():
-        return jsonify(user={'name':g.user['name'],'email':g.user['email']},csrf=g.user['csrf'])
+        return jsonify(user={'name':g.user['name'],'email':g.user['email'],'role':g.user['role']},csrf=g.user['csrf'])
+
+    @app.post('/api/register')
+    def register():
+        db, now = database(), time.time()
+        key = 'register:' + hashlib.sha256((request.remote_addr or '').encode()).hexdigest()
+        with db:
+            db.execute('DELETE FROM attempts WHERE started<?',(now-900,))
+            db.execute('INSERT INTO attempts VALUES (?,1,?) ON CONFLICT(key) DO UPDATE SET count=count+1',(key,now))
+        if db.execute('SELECT count FROM attempts WHERE key=?',(key,)).fetchone()[0] > 5:
+            return error('Trop de demandes. Réessayez dans 15 minutes.',429)
+        data = body()
+        name,region,phone,notes = producer_data(data)
+        email,password = text(data,'email',254).lower(),text(data,'password',256)
+        if not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',email):
+            return error('Vérifiez votre adresse email.')
+        if len(password)<12 or password != data.get('password'):
+            return error('Choisissez un mot de passe de 12 caractères minimum, sans espace au début ou à la fin.')
+        if password != data.get('password_confirm'):
+            return error('Les deux mots de passe doivent être identiques.')
+        try:
+            with db:
+                account = db.execute("INSERT INTO professionals(name,email,password_hash,role) VALUES (?,?,?,'producer')",(name,email,generate_password_hash(password)))
+                db.execute('INSERT INTO producers(owner_id,name,region,phone,notes) VALUES (?,?,?,?,?)',(account.lastrowid,name,region,phone,notes))
+        except sqlite3.IntegrityError:
+            return error('Cette adresse ne peut pas être utilisée. Essayez de vous connecter ou contactez le responsable.',409)
+        return jsonify(success=True),201
 
     @app.post('/api/logout')
     def logout():
@@ -165,6 +194,8 @@ def create_app(config=None):
 
     @app.post('/api/producers')
     def add_producer():
+        if g.user['role']=='producer':
+            return error('Votre compte possède déjà sa fiche personnelle.',403)
         values = producer_data(body())
         with database() as db:
             cursor = db.execute('INSERT INTO producers(owner_id,name,region,phone,notes) VALUES (?,?,?,?,?)',(g.user['id'],*values))
