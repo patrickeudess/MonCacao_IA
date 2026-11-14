@@ -22,3 +22,22 @@ h2{letter-spacing:0;line-height:1.35}
 @media(max-width:700px){.sidebar{padding:18px 20px}.sidebar-bottom{flex-wrap:wrap}.sidebar-bottom p{flex:1}.topbar{gap:12px}.topbar>span:first-child{line-height:1.5}.prediction-card h3{font-size:26px}}
 
 .producer-actions{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:28px}.personal-stats{grid-template-columns:repeat(3,minmax(0,1fr))}#show-register{width:100%;margin-top:16px}#register-form .help{margin-top:0}#show-login{display:block;margin-top:16px}@media(max-width:700px){.personal-stats{grid-template-columns:1fr}.producer-actions button{width:100%}}
+
+/* Touch-friendly navigation and harvest history. */
+button{min-height:44px}input,select,textarea{font-size:16px}
+.stat,.card,.producer-row>div{min-width:0}.stat strong,.page-heading h1{overflow-wrap:anywhere}
+@media(max-width:700px){
+ nav{flex-wrap:wrap;overflow:visible}nav button{white-space:normal;flex:1 1 auto;font-size:13px}
+ .sidebar-bottom{gap:8px}.sidebar-bottom p{overflow-wrap:anywhere}
+ .topbar{height:auto;min-height:58px;padding-top:12px;padding-bottom:12px;flex-wrap:wrap}
+ .producer-row{flex-wrap:wrap}.producer-row>div{flex:1}.producer-row .text-button{margin-left:0}
+ .table-wrap{overflow:visible;border:0;background:transparent}
+ .table-wrap table,.table-wrap tbody,.table-wrap tr,.table-wrap td{display:block;width:100%;white-space:normal}
+ .table-wrap thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+ .table-wrap tbody tr{background:white;border:1px solid #dce3de;border-radius:6px;padding:10px 16px;margin-bottom:16px}
+ .table-wrap td{display:flex;justify-content:space-between;gap:16px;padding:10px 0;text-align:right;overflow-wrap:anywhere}
+ .table-wrap td::before{content:attr(data-label);font-weight:600;text-align:left;color:#52665c}
+ .table-wrap td:last-child{border:0}.prediction-card dl{grid-template-columns:1fr}.prediction-card dd{margin-bottom:8px}
+ dialog{max-height:calc(100dvh - 24px);width:calc(100% - 24px);padding:18px}
+ .form-actions{position:sticky;bottom:-18px;background:white;padding-bottom:12px}
+}
