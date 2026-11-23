@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#173b2a">
+<title>Mon Cacao | Carnet de campagne</title>
+<style>
+:root{color-scheme:light;--forest:#173b2a;--green:#245c40;--paper:#f6f4ee;--line:#dedfd5;--ink:#202e26;--muted:#546358}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 system-ui,sans-serif}header{background:var(--forest);color:white}header div,main{width:min(100% - 32px,1000px);margin:auto}header div{padding:16px 0;display:flex;justify-content:space-between;gap:12px;align-items:center}header strong{font: bold 25px Georgia,serif}header span{font-size:.82rem;color:#e1eddf}main{padding:25px 0 50px}h1,h2,h3,p{margin:0 0 12px}h1{font:clamp(2rem,5vw,3.2rem)/1.1 Georgia,serif}h2{line-height:1.2}p,small{color:var(--muted)}.intro{padding:25px;background:#e5ebdd;border-radius:16px}.intro p{margin:10px 0 0}nav{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0}button,input,select{font:inherit}button{border:1px solid var(--line);border-radius:9px;min-height:44px;padding:8px 14px;cursor:pointer;background:white;color:var(--ink)}button[aria-current=true],button.primary{background:var(--green);border-color:var(--green);color:white}:focus-visible{outline:3px solid #916424;outline-offset:2px}.card{background:white;border:1px solid var(--line);padding:20px;border-radius:14px;margin:0 0 14px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px}.metric{display:block;font:1.8rem Georgia,serif;color:var(--forest)}label{display:grid;gap:5px;font-weight:600;margin-bottom:10px}input,select{width:100%;min-width:0;min-height:44px;border:1px solid #a9b5a9;background:white;border-radius:8px;padding:7px 10px;color:var(--ink)}output{display:block;margin-top:16px;white-space:pre-line;color:var(--forest);font-weight:650}ul{margin:0;padding-left:22px}li{margin:6px 0}.actions{display:flex;gap:8px;flex-wrap:wrap}.muted{font-size:.9rem}.list{list-style:none;padding:0}.list li{border-top:1px solid var(--line);padding:9px 0}.list li:first-child{border:0}[hidden]{display:none!important}@media(max-width:480px){.intro,.card{padding:16px}nav button{flex:1 0 42%}}
+</style>
+<header><div><strong>Mon Cacao</strong><span>Démo PACA-CI</span></div></header>
+<main>
+<div class="intro"><h1>Carnet de campagne cacao</h1><p>Suivez vos récoltes, préparez votre prochaine campagne et documentez vos pratiques agricoles.</p></div>
+<p class="muted" style="margin-top:12px">Parcelle fictive de 2 hectares dans la Nawa. Vos essais restent dans ce navigateur.</p>
+<nav aria-label="Fonctions du carnet">
+<button type="button" aria-current="true" data-view="recoltes">Récoltes</button>
+<button type="button" data-view="estimation">Estimation</button>
+<button type="button" data-view="conseils">Conseils</button>
+<button type="button" data-view="pratiques">Score écologique</button>
+<button type="button" data-view="cooperative">Coopérative</button>
+</nav>
+<section id="recoltes">
+<h2>Suivre les récoltes</h2>
+<div class="grid"><div class="card"><small>Total récolté</small><strong class="metric" id="weight"></strong></div><div class="card"><small>Recettes brutes</small><strong class="metric" id="revenue"></strong></div></div>
+<div class="card"><h3>Ajouter une récolte</h3><form id="harvest"><div class="grid">
+<label>Date<input id="date" type="date" required></label>
+<label>Poids vendu en kg<input id="kg" type="number" min="1" max="100000" step=".1" required></label>
+<label>Prix payé par kg en FCFA<input id="price" type="number" min="1" max="10000" required></label></div>
+<button class="primary">Enregistrer</button><output id="harvest-status" aria-live="polite"></output></form></div>
+<div class="card"><h3>Historique</h3><ul id="history" class="list"></ul></div>
+</section>
+<section id="estimation" hidden><div class="card"><h2>Estimer la production</h2><p>Faites un essai à partir du rendement que vous pensez obtenir par hectare. La démo calcule le volume total à partir de vos hypothèses.</p>
+<form id="estimate"><div class="grid"><label>Surface en hectares<input id="area" type="number" min=".01" max="1000" step=".01" value="2" required></label>
+<label>Rendement attendu en kg par hectare<input id="yield" type="number" min="1" max="5000" value="550" required></label></div><button class="primary">Calculer</button><output id="estimate-result" aria-live="polite"></output></form></div></section>
+<section id="conseils" hidden><div class="card"><h2>Préparer une visite de parcelle</h2><p>Choisissez une observation pour obtenir un point à vérifier avec votre conseiller agricole.</p><label>Que remarquez-vous ?
+<select id="observation"><option value="">Choisir une observation</option><option value="dry">Sol sec et peu couvert</option><option value="shade">Peu d’arbres d’ombrage</option><option value="pods">Taches sur plusieurs cabosses</option></select></label>
+<output id="tip" aria-live="polite"></output></div></section>
+<section id="pratiques" hidden><div class="card"><h2>Évaluer ses pratiques</h2><p>Grille de démonstration. Chaque pratique déclarée vaut 25 points. Le résultat est indicatif.</p><form id="practice">
+<label>Des arbres donnent de l’ombre aux cacaoyers<select required><option value="">Choisir</option><option value="25">Oui</option><option value="0">Non</option></select></label>
+<label>Le sol est protégé par un couvert ou du paillage<select required><option value="">Choisir</option><option value="25">Oui</option><option value="0">Non</option></select></label>
+<label>Les limites de la parcelle sont documentées<select required><option value="">Choisir</option><option value="25">Oui</option><option value="0">Non</option></select></label>
+<label>Les interventions sur la parcelle sont consignées<select required><option value="">Choisir</option><option value="25">Oui</option><option value="0">Non</option></select></label>
+<button class="primary">Voir mon bilan</button><output id="score" aria-live="polite"></output></form></div></section>
+<section id="cooperative" hidden><div class="card"><h2>Préparer un dossier de financement</h2><p>Cette fiche d’exemple rassemble les informations à vérifier avec la coopérative avant un échange avec un partenaire financier.</p><ul class="list"><li><strong>Parcelle</strong> · Nawa, 2 ha, exemple fictif</li><li id="summary-harvest"></li><li id="summary-score"></li><li><strong>Justificatifs à réunir</strong> · Localisation de la parcelle, historique des récoltes et preuves des pratiques déclarées.</li></ul><button class="primary" type="button" id="download">Télécharger la fiche</button></div></section>
+</main>
+<script>
+const byId = id => document.getElementById(id);
+const number = new Intl.NumberFormat('fr-CI', {maximumFractionDigits: 2});
+const format = value => number.format(value);
+const key = 'mon-cacao-paca-demo';
+const sample = [{date:'2026-10-18', kg:320, price:1500},{date:'2026-11-04', kg:280, price:1500}];
+let data = {harvests:sample, score:null};
+try {
+  const saved = JSON.parse(localStorage.getItem(key));
+  if (saved && Array.isArray(saved.harvests)) data = saved;
+} catch {}
+function save() {
+  try { localStorage.setItem(key, JSON.stringify(data)); return true; }
+  catch { return false; }
+}
+const tabs = [...document.querySelectorAll('nav button')];
+tabs.forEach(button => button.addEventListener('click', () => {
+  for (const tab of tabs) {
+    const active = tab === button;
+    tab.setAttribute('aria-current', String(active));
+    byId(tab.dataset.view).hidden = !active;
+  }
+}));
+function render() {
+  const weight = data.harvests.reduce((total, row) => total + row.kg, 0);
+  const revenue = data.harvests.reduce((total, row) => total + row.kg * row.price, 0);
+  byId('weight').textContent = format(weight) + ' kg';
+  byId('revenue').textContent = format(revenue) + ' FCFA';
+  byId('history').replaceChildren(...[...data.harvests].sort((a,b) => b.date.localeCompare(a.date)).map(row => {
+    const item = document.createElement('li');
+    const date = new Intl.DateTimeFormat('fr-CI',{timeZone:'UTC'}).format(new Date(row.date));
+    item.textContent = date + ' · ' + format(row.kg) + ' kg · ' + format(row.kg * row.price) + ' FCFA';
+    return item;
+  }));
+  byId('summary-harvest').textContent = 'Récoltes enregistrées · ' + format(weight) + ' kg · ' + format(revenue) + ' FCFA';
+  byId('summary-score').textContent = 'Score écologique indicatif · ' + (data.score === null ? 'À renseigner' : data.score + '/100');
+  byId('score').textContent = data.score === null ? '' : data.score + '/100 · Bilan indicatif sur les pratiques déclarées.';
+}
+byId('harvest').addEventListener('submit', event => {
+  event.preventDefault();
+  data.harvests = [...data.harvests, {date:byId('date').value, kg:byId('kg').valueAsNumber, price:byId('price').valueAsNumber}];
+  byId('harvest-status').textContent = save() ? 'Récolte enregistrée sur cet appareil.' : 'Récolte ajoutée pour cette session.';
+  event.currentTarget.reset();
+  render();
+});
+byId('estimate').addEventListener('submit', event => {
+  event.preventDefault();
+  byId('estimate-result').textContent = format(byId('area').valueAsNumber * byId('yield').valueAsNumber) + ' kg de cacao estimés avec vos hypothèses.';
+});
+const tips = {
+  dry:'Notez les zones où le sol est à nu et demandez à votre conseiller quelles protections du sol conviennent à la parcelle.',
+  shade:'Repérez les cacaoyers les plus exposés au soleil. Demandez à votre conseiller de vérifier l’ombrage adapté.',
+  pods:'Photographiez les cabosses touchées et notez depuis quand les taches sont visibles. Montrez ces observations à votre conseiller.'
+};
+byId('observation').addEventListener('change', event => { byId('tip').textContent = tips[event.target.value] || ''; });
+byId('practice').addEventListener('submit', event => {
+  event.preventDefault();
+  data.score = [...event.currentTarget.querySelectorAll('select')].reduce((sum, input) => sum + Number(input.value), 0);
+  save();
+  render();
+});
+byId('download').addEventListener('click', () => {
+  const text = ['Mon Cacao | Fiche de démonstration','Parcelle fictive de 2 hectares dans la Nawa',byId('summary-harvest').textContent,byId('summary-score').textContent,'À réunir avant le rendez-vous : localisation, historique et justificatifs des pratiques.'].join('\n');
+  const url = URL.createObjectURL(new Blob([text], {type:'text/plain;charset=utf-8'}));
+  const link = Object.assign(document.createElement('a'), {href:url, download:'mon-cacao-fiche-cooperative.txt'});
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+render();
+</script>
+</html>
