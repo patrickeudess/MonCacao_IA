@@ -317,7 +317,20 @@ def create_app(config=None):
         db = database()
         counts = db.execute('SELECT COUNT(*) total,SUM(CASE WHEN NOT EXISTS(SELECT 1 FROM harvests h WHERE h.producer_id=p.id) THEN 1 ELSE 0 END) pending FROM producers p WHERE owner_id=?',(g.user['id'],)).fetchone()
         totals = db.execute('SELECT COUNT(*) harvests,COALESCE(SUM(h.harvest_kg),0) kg,COALESCE(SUM(h.harvest_kg*h.price_fcfa_kg),0) revenue FROM harvests h JOIN producers p ON p.id=h.producer_id WHERE p.owner_id=?',(g.user['id'],)).fetchone()
-        return jsonify(producers=counts['total'],pending=counts['pending'] or 0,**dict(totals))
+        locations = db.execute("""
+            WITH latest AS (
+                SELECT producer_id, MAX(id) AS id FROM field_assessments GROUP BY producer_id
+            )
+            SELECT p.region, COUNT(*) AS producers, COUNT(a.id) AS assessed,
+                   AVG(25*(a.shade+a.soil_cover+a.boundaries+a.records)) AS average_score
+            FROM producers p
+            LEFT JOIN latest l ON l.producer_id=p.id
+            LEFT JOIN field_assessments a ON a.id=l.id
+            WHERE p.owner_id=?
+            GROUP BY p.region ORDER BY p.region COLLATE NOCASE
+        """, (g.user['id'],))
+        return jsonify(producers=counts['total'], pending=counts['pending'] or 0,
+                       locations=[dict(row) for row in locations], **dict(totals))
 
     @app.get('/api/export/<kind>')
     def export(kind):

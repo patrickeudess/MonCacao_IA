@@ -10,6 +10,8 @@ Une application Flask pour suivre les producteurs et les données réelles colle
 - Historique par producteur et conseils datés, attribués au professionnel qui les saisit.
 - Prédiction de rendement XGBoost depuis la fiche producteur et historique des estimations.
 - Tableau de bord : producteurs, nombre de récoltes, poids et revenus calculés.
+- Points à vérifier selon la dernière récolte et le dernier bilan enregistré. Ils orientent la visite du conseiller.
+- Tableau de suivi par localité dans l’espace professionnel, avec nombre de producteurs évalués et moyenne des derniers bilans.
 - Bilan des pratiques par fiche producteur, score indicatif et historique des observations.
 - Exports CSV des producteurs, récoltes, conseils et bilans pour préparer un dossier de financement.
 

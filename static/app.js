@@ -22,8 +22,8 @@ function renderProducers(){
  $('#producer-list').innerHTML=filtered.map(p=>`<article class="card producer-card"><span class="avatar">${esc(initials(p.name))}</span><h2>${esc(p.name)}</h2><p>${esc(p.region)}, ${esc(p.phone||'Téléphone non renseigné')}</p><p>${p.harvest_count} ${p.harvest_count > 1 ? 'récoltes enregistrées' : 'récolte enregistrée'}<br>${p.last_harvest?'Dernière récolte : '+prettyDate(p.last_harvest):'Première récolte à renseigner'}</p><button class="secondary" data-producer="${p.id}">Ouvrir la fiche</button></article>`).join('')||'<div class="card empty">'+(query?'Aucun producteur ne correspond à votre recherche.':'Aucun producteur pour le moment. Ajoutez votre première fiche pour commencer.')+'</div>';
  $('#recent-producers').innerHTML=state.producers.slice(0,5).map(p=>`<div class="producer-row"><span class="avatar">${esc(initials(p.name))}</span><div><p><strong>${esc(p.name)}</strong></p><small>${esc(p.region)}, ${p.harvest_count} ${p.harvest_count > 1 ? 'récoltes' : 'récolte'}</small></div><button class="text-button" data-producer="${p.id}" aria-label="Ouvrir la fiche de ${esc(p.name)}">Ouvrir</button></div>`).join('')||'<div class="empty">Votre suivi commence ici.<br>Ajoutez un producteur, puis sa première récolte.</div>';
 }
-async function refresh(){const [p,d]=await Promise.all([api('/producers'),api('/dashboard')]);state.producers=p.producers;renderProducers();$('#stats').innerHTML=[...(state.role==='producer'?[]:[['Producteurs suivis',d.producers,`${d.pending} sans récolte enregistrée`]]),['Récoltes enregistrées',d.harvests,'Toutes dates confondues'],['Cacao récolté',fmt(d.kg)+' kg','Poids total saisi'],['Montant des ventes',fmt(d.revenue),'FCFA, poids multiplié par prix de vente']].map(s=>`<article class="stat"><span>${s[0]}</span><strong>${s[1]}</strong><small>${s[2]}</small></article>`).join('');}
-async function openProducer(id){const data=await api('/producers/'+id);state.detail=data;$('#detail-name').textContent=data.producer.name;$('#detail-meta').textContent=data.producer.region+', '+(data.producer.phone||'Téléphone non renseigné');$('#detail-notes').textContent=data.producer.notes;$('#harvest-list').innerHTML=data.harvests.length?`<table><thead><tr><th>Date de récolte</th><th>Surface</th><th>Poids</th><th>Prix / kg</th><th>Montant des ventes</th><th>Dépenses</th><th>Action</th></tr></thead><tbody>${data.harvests.map(h=>`<tr><td>${prettyDate(h.observed_on)}</td><td>${fmt(h.area_ha)} ha</td><td>${fmt(h.harvest_kg)} kg</td><td>${fmt(h.price_fcfa_kg)} FCFA</td><td>${fmt(h.harvest_kg*h.price_fcfa_kg)} FCFA</td><td>${fmt(h.cost_fcfa)} FCFA</td><td><button class="text-button" data-harvest="${h.id}">Consulter / modifier</button></td></tr>`).join('')}</tbody></table>`:'<div class="empty">Aucune récolte enregistrée. Saisissez les observations collectées sur le terrain.</div>';document.querySelectorAll('#harvest-list tbody tr').forEach(row=>{const labels=['Date de récolte','Surface','Poids','Prix par kg','Montant des ventes','Dépenses','Action'];row.querySelectorAll('td').forEach((cell,i)=>cell.dataset.label=labels[i]);});$('#advice-list').innerHTML=data.advice.map(a=>`<article class="card"><p>${esc(a.content)}</p><small>Saisi par ${esc(a.author)}, ${esc(a.created_at)}</small></article>`).join('')||`<p class="empty">${state.role==='producer'?'Vous n’avez pas encore ajouté de note.':'Aucun conseil enregistré pour ce producteur.'}</p>`;renderPredictions(data.predictions||[]);renderAssessments(data.assessments||[]);show('detail');}
+async function refresh(){const [p,d]=await Promise.all([api('/producers'),api('/dashboard')]);state.producers=p.producers;renderProducers();renderLocationSummary(d.locations);$('#stats').innerHTML=[...(state.role==='producer'?[]:[['Producteurs suivis',d.producers,`${d.pending} sans récolte enregistrée`]]),['Récoltes enregistrées',d.harvests,'Toutes dates confondues'],['Cacao récolté',fmt(d.kg)+' kg','Poids total saisi'],['Montant des ventes',fmt(d.revenue),'FCFA, poids multiplié par prix de vente']].map(s=>`<article class="stat"><span>${s[0]}</span><strong>${s[1]}</strong><small>${s[2]}</small></article>`).join('');}
+async function openProducer(id){const data=await api('/producers/'+id);state.detail=data;$('#detail-name').textContent=data.producer.name;$('#detail-meta').textContent=data.producer.region+', '+(data.producer.phone||'Téléphone non renseigné');$('#detail-notes').textContent=data.producer.notes;$('#harvest-list').innerHTML=data.harvests.length?`<table><thead><tr><th>Date de récolte</th><th>Surface</th><th>Poids</th><th>Prix / kg</th><th>Montant des ventes</th><th>Dépenses</th><th>Action</th></tr></thead><tbody>${data.harvests.map(h=>`<tr><td>${prettyDate(h.observed_on)}</td><td>${fmt(h.area_ha)} ha</td><td>${fmt(h.harvest_kg)} kg</td><td>${fmt(h.price_fcfa_kg)} FCFA</td><td>${fmt(h.harvest_kg*h.price_fcfa_kg)} FCFA</td><td>${fmt(h.cost_fcfa)} FCFA</td><td><button class="text-button" data-harvest="${h.id}">Consulter / modifier</button></td></tr>`).join('')}</tbody></table>`:'<div class="empty">Aucune récolte enregistrée. Saisissez les observations collectées sur le terrain.</div>';document.querySelectorAll('#harvest-list tbody tr').forEach(row=>{const labels=['Date de récolte','Surface','Poids','Prix par kg','Montant des ventes','Dépenses','Action'];row.querySelectorAll('td').forEach((cell,i)=>cell.dataset.label=labels[i]);});$('#advice-list').innerHTML=data.advice.map(a=>`<article class="card"><p>${esc(a.content)}</p><small>Saisi par ${esc(a.author)}, ${esc(a.created_at)}</small></article>`).join('')||`<p class="empty">${state.role==='producer'?'Vous n’avez pas encore ajouté de note.':'Aucun conseil enregistré pour ce producteur.'}</p>`;renderFieldPriorities(data);renderPredictions(data.predictions||[]);renderAssessments(data.assessments||[]);show('detail');}
 function field(label,name,value='',type='text',extra=''){return `<label>${label}<input name="${name}" type="${type}" value="${esc(value)}" ${extra}></label>`;}
 function select(label,name,value){return `<label>${label}<select name="${name}">${['Non renseigné','Oui','Non'].map(v=>`<option${value===v?' selected':''}>${v}</option>`).join('')}</select></label>`;}
 function editor(mode,item=null){state.mode=mode;state.editId=item?.id??null;$('#editor-error').textContent='';let html='';
@@ -137,6 +137,7 @@ $('#assessment-form').addEventListener('submit', async event => {
       if (state.detail?.producer.id === id && !$('#detail').hidden) {
         state.detail = detail;
         renderAssessments(detail.assessments);
+        renderFieldPriorities(detail);
         $('#assessment-message').textContent = 'Bilan enregistré.';
       }
     }
@@ -146,3 +147,32 @@ $('#assessment-form').addEventListener('submit', async event => {
     button.disabled = false;
   }
 });
+
+function renderFieldPriorities(detail) {
+  const checks = [];
+  if (detail.harvests[0]?.disease === 'Oui') {
+    checks.push('Une maladie a été signalée lors de la dernière récolte saisie. Notez les symptômes et demandez à votre conseiller de les examiner.');
+  }
+  const latest = detail.assessments[0];
+  if (latest) {
+    if (!latest.shade) checks.push('Le dernier bilan indique peu ou pas d’ombre. Repérez les zones les plus exposées pour en parler au conseiller.');
+    if (!latest.soil_cover) checks.push('Le dernier bilan indique un sol sans couverture. Repérez les zones de sol nu avant la prochaine visite.');
+    if (!latest.boundaries) checks.push('Réunissez les documents qui décrivent les limites de la parcelle.');
+    if (!latest.records) checks.push('Notez les interventions sur la parcelle avec leur date.');
+  } else {
+    checks.push('Renseignez un premier bilan des pratiques pour identifier les points à suivre.');
+  }
+  $('#field-priorities').innerHTML = checks.length
+    ? checks.map(check => '<li>' + esc(check) + '</li>').join('')
+    : '<li>Aucun point à vérifier à partir des dernières observations disponibles.</li>';
+}
+
+function renderLocationSummary(locations) {
+  $('#locations-summary').hidden = state.role !== 'professional';
+  $('#locations-list').innerHTML = locations.map(row =>
+    '<li><strong>' + esc(row.region) + '</strong> · ' + fmt(row.producers) +
+    ' suivis · ' + fmt(row.assessed) + ' avec un bilan' +
+    (row.average_score === null ? '' : ' · ' + fmt(row.average_score) + '/100 en moyenne') +
+    '</li>'
+  ).join('') || '<li>Ajoutez un producteur pour voir les résultats par localité.</li>';
+}
