@@ -10,9 +10,12 @@ Une application Flask pour suivre les producteurs et les données réelles colle
 - Historique par producteur et conseils datés, attribués au professionnel qui les saisit.
 - Prédiction de rendement XGBoost depuis la fiche producteur et historique des estimations.
 - Tableau de bord : producteurs, nombre de récoltes, poids et revenus calculés.
-- Exports CSV des producteurs, récoltes et conseils.
+- Bilan des pratiques par fiche producteur, score indicatif et historique des observations.
+- Exports CSV des producteurs, récoltes, conseils et bilans pour préparer un dossier de financement.
 
-L’assistant IA, score écologique, messagerie, notifications, badges, cartographie, rapports PDF et synchronisation hors ligne ont été retirés du parcours et du serveur V1. Les versions précédentes restent dans Git. Le modèle existant est chargé pour les prédictions ; le script d’entraînement reste séparé et n’est jamais exécuté par l’application. Le script historique génère des données synthétiques : cela ne permet pas de conclure à la provenance du modèle livré ni à celle des données terrain du propriétaire.
+Le bilan repose sur quatre pratiques documentées. Il ne constitue ni une certification environnementale ni une décision de financement.
+
+L’assistant IA, messagerie, notifications, badges, cartographie, rapports PDF et synchronisation hors ligne ont été retirés du parcours et du serveur V1. Les versions précédentes restent dans Git. Le modèle existant est chargé pour les prédictions ; le script d’entraînement reste séparé et n’est jamais exécuté par l’application. Le script historique génère des données synthétiques : cela ne permet pas de conclure à la provenance du modèle livré ni à celle des données terrain du propriétaire.
 
 ## Lancement local (PowerShell, Python 3.12)
 

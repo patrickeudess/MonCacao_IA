@@ -27,6 +27,17 @@ CREATE TABLE IF NOT EXISTS harvests(id INTEGER PRIMARY KEY,producer_id INTEGER N
 CREATE TABLE IF NOT EXISTS advice(id INTEGER PRIMARY KEY,producer_id INTEGER NOT NULL REFERENCES producers(id),content TEXT NOT NULL,author TEXT NOT NULL,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS attempts(key TEXT PRIMARY KEY,count INTEGER NOT NULL,started REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS predictions(id INTEGER PRIMARY KEY,producer_id INTEGER NOT NULL REFERENCES producers(id),inputs_json TEXT NOT NULL,area_ha REAL NOT NULL,productivity_t_ha REAL NOT NULL,estimated_total_kg REAL NOT NULL,model_version TEXT NOT NULL,author TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS field_assessments(
+    id INTEGER PRIMARY KEY,
+    producer_id INTEGER NOT NULL REFERENCES producers(id),
+    shade INTEGER NOT NULL CHECK(shade IN (0,1)),
+    soil_cover INTEGER NOT NULL CHECK(soil_cover IN (0,1)),
+    boundaries INTEGER NOT NULL CHECK(boundaries IN (0,1)),
+    records INTEGER NOT NULL CHECK(records IN (0,1)),
+    notes TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS assessment_producer ON field_assessments(producer_id,id);
 CREATE INDEX IF NOT EXISTS prediction_producer ON predictions(producer_id);
 '''
 
@@ -223,7 +234,26 @@ def create_app(config=None):
             item = dict(prediction)
             item['inputs'] = json.loads(item.pop('inputs_json'))
             history.append(item)
-        return jsonify(producer=dict(row),harvests=[dict(h) for h in harvests],advice=[dict(a) for a in advice],predictions=history)
+        assessments = database().execute(
+            'SELECT * FROM field_assessments WHERE producer_id=? ORDER BY id DESC', (pid,))
+        return jsonify(producer=dict(row), harvests=[dict(h) for h in harvests],
+                       advice=[dict(a) for a in advice], predictions=history,
+                       assessments=[dict(a) for a in assessments])
+
+    @app.post('/api/producers/<int:pid>/assessments')
+    def add_assessment(pid):
+        if not owned(pid):
+            return error('Producteur introuvable.', 404)
+        data = body()
+        practices = tuple(data.get(key) for key in ('shade', 'soil_cover', 'boundaries', 'records'))
+        if any(type(value) is not bool for value in practices):
+            return error('Répondez à chaque question sur les pratiques.', 400)
+        notes = text(data, 'notes', 1000, required=False)
+        with database() as db:
+            cursor = db.execute(
+                '''INSERT INTO field_assessments(producer_id,shade,soil_cover,boundaries,records,notes)
+                   VALUES (?,?,?,?,?,?)''', (pid, *practices, notes))
+        return jsonify(id=cursor.lastrowid), 201
 
     @app.get('/api/prediction-schema')
     def prediction_schema():
@@ -294,6 +324,13 @@ def create_app(config=None):
         queries = {
             'producers': ('SELECT name,region,phone,notes,created_at FROM producers WHERE owner_id=? ORDER BY name',['Nom','Région','Téléphone','Notes','Création']),
             'harvests': ('SELECT p.name,h.observed_on,h.area_ha,h.age_years,h.harvest_kg,h.price_fcfa_kg,h.cost_fcfa,h.harvest_kg*h.price_fcfa_kg,h.agroforestry,h.disease,h.notes FROM harvests h JOIN producers p ON p.id=h.producer_id WHERE p.owner_id=? ORDER BY h.observed_on DESC',['Producteur','Date récolte','Surface ha','Âge ans','Récolte kg','Prix FCFA/kg','Coûts récolte FCFA','Revenu calculé FCFA','Agroforesterie','Maladie','Notes']),
+            'assessments': (
+                '''SELECT p.name,p.region,a.created_at,a.shade,a.soil_cover,a.boundaries,a.records,
+                          25*(a.shade+a.soil_cover+a.boundaries+a.records),a.notes
+                   FROM field_assessments a JOIN producers p ON p.id=a.producer_id
+                   WHERE p.owner_id=? ORDER BY a.id DESC''',
+                ['Producteur','Localité','Date','Ombrage','Sol couvert','Limites documentées',
+                 'Registre des interventions','Score / 100','Justificatifs ou observations']),
             'advice': ('SELECT p.name,a.content,a.author,a.created_at FROM advice a JOIN producers p ON p.id=a.producer_id WHERE p.owner_id=? ORDER BY a.id DESC',['Producteur','Conseil','Auteur','Date'])}
         if kind not in queries:
             return error('Export introuvable.',404)
